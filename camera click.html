@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automatic Image Capture and Upload</title>
+</head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        #cameraBox {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ccc;
+            background-color: #000;
+            width: 300px;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+
+        #capturedPhoto {
+            max-width: 100%;
+            max-height: 100%;
+            display: none;
+        }
+
+        #descriptionBox {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            width: 300px;
+            height: 200px;
+            padding: 10px;
+        }
+
+        #description {
+            font-size: 16px;
+            color: #333;
+            text-align: center;
+        }
+
+        #captureButton,
+        #runButton {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        #captureButton:hover,
+        #runButton:hover {
+            background-color: #217dbb;
+        }
+    </style>
+<body>
+    <h1>Automatic Image Capture and Upload</h1>
+    <div class="container">
+        <div id="cameraBox">
+            <video id="video" width="300" height="225" autoplay></video>
+        </div>
+        <button id="captureButton">Capture Photo</button>
+        <canvas id="canvas" style="display: none;"></canvas>
+        <div id="descriptionBox">
+            <div id="description"></div>
+        </div>
+        <button id="runButton" style="display: none;">Run</button>
+    </div>
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureButton = document.getElementById('captureButton');
+    const runButton = document.getElementById('runButton');
+
+    // Capture button click event handler
+    captureButton.addEventListener('click', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        captureButton.style.display = 'none'; // Hide the Capture button
+        runButton.style.display = 'block'; // Display the Run button after capturing
+    });
+
+    // Run button click event handler
+    runButton.addEventListener('click', () => {
+        canvas.toBlob((blob) => {
+            const formData = new FormData();
+            formData.append('image', blob, 'image.png');
+            fetch('https://3.108.228.106/cgi-bin/upload.py', { method: 'POST', body: formData })
+                .then(response => response.text())
+                .then(data => console.log(data))
+                .catch(error => console.error('Error uploading image:', error));
+        });
+    });
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+            video.srcObject = stream;
+            runButton.style.display = 'block'; // Display the Run button once camera is ready
+            
+            // Try to access the rear camera first
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                    .then((stream) => {
+                        video.srcObject = stream;
+                    })
+                    .catch((error) => {
+                        console.error('Error accessing rear camera:', error);
+                        // If rear camera access fails, try accessing the front camera
+                        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                            .then((stream) => {
+                                video.srcObject = stream;
+                            })
+                            .catch((error) => {
+                                console.error('Error accessing front camera:', error);
+                            });
+                    });
+            } else {
+                console.error('getUserMedia is not supported by this browser');
+            }
+        })
+        .catch((error) => {
+            console.error('Error accessing webcam:', error);
+        });
+</script>
+
+</body>
+</html>
